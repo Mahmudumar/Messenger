@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.min.js" integrity="sha512-mHO4BJ0ELk7Pb1AzhTi3zvUeRgq3RXVOu9tTRfnA6qOxGK4pG2u57DJYolI4KrEnnLTcH9/J5wNOozRTDaybXg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <title>Chatting as {{username}}</title>
+</head>
+
+<style>
+    * {
+        box-sizing: border-box;
+        margin: 0px;
+        padding: 0px;
+    }
+    
+    body {
+        font-family: sans-serif;
+        --bottom-height: 100px;
+        --message-width: 150px;
+        padding: 10px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        background-color: #292929;
+    }
+    
+    .room {
+        height: calc(100vh - var(--bottom-height));
+        width: 100%;
+        background-color: #292929;
+        overflow-x: hidden;
+        overflow-y: auto;
+        flex-direction: column;
+    }
+    
+    .room-scroll {
+        display: flex;
+    }
+    
+    .room .msgline {
+        display: flex;
+        width: 100%;
+        height: fit-content;
+        justify-content: right;
+    }
+    /*.room .incoming_messagebox {
+        display: flex;
+        overflow-wrap: break-word;
+        background-color: #f2f2f2;
+        max-height: fit-content;
+        max-width: var(--message-width);
+        padding: 5px;
+        margin: 10px 5px;
+        border-radius: 20px 20px 20px 0px;
+    }
+    
+    .incoming_messagebox p {
+        text-align: left;
+        max-width: calc(var(--message-width) - 20px);
+        max-height: fit-content;
+    }*/
+    
+    .room .outgoing_messagebox {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #1b96dd;
+        padding: 10px;
+        margin: 10px 5px;
+        border-radius: 20px 20px 0px 20px;
+        max-height: fit-content;
+        max-width: calc(var(--message-width) + 10px);
+        overflow-wrap: break-word;
+    }
+    
+    .outgoing_messagebox p {
+        text-align: left;
+        color: #f2f2ff;
+        max-width: calc(var(--message-width) - 20px);
+        max-height: fit-content;
+    }
+    
+    .type {
+        height: var(--bottom-height);
+        background-color: transparent;
+        position: fixed;
+        bottom: 0%;
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        width: 100%;
+    }
+    
+    .type #cta1 {
+        width: 10%;
+        display: flex;
+        justify-content: center;
+    }
+    
+    .type #textbox {
+        width: 70%;
+        display: flex;
+        justify-content: center;
+    }
+    
+    .type #cta2 {
+        display: flex;
+        width: 20%;
+        justify-content: center;
+        margin-right: 10px;
+    }
+    
+    .type textarea {
+        text-align: start;
+        max-height: 200px;
+        width: 500px;
+        max-width: 80%;
+        margin: 10px;
+        padding: 10px;
+        border-radius: 20px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        resize: none;
+        font-size: 20px;
+        font-family: sans-serif;
+        background-color: transparent;
+        color: #f2f2ff;
+    }
+    
+    .type #send {
+        display: flex;
+        width: 35px;
+        height: 35px;
+        font-size: 10px;
+        border-radius: 50px;
+        align-items: center;
+        justify-content: center;
+        padding: 10px;
+        margin: 10px;
+    }
+</style>
+
+<body>
+    <div class="room">
+        <div class="room-scroll">
+
+            <template>
+                <div class="msgline" id="outgoing">
+                    <div class="outgoing_messagebox">
+                        <p></p>
+                    </div>
+                </div>
+            </template>
+
+        </div>
+    </div>
+
+    <div class="type">
+        <div id="cta1"></div>
+        <div id="textbox">
+            <textarea type="text" name="msg" id="messagebox" placeholder="Message"></textarea>
+        </div>
+
+        <div id="cta2">
+            <button id="send" style="font-family: sans-serif;font-size: 20px; text-align: center;"> > </button>
+        </div>
+    </div>
+
+
+</body>
+<script type="text/javascript">
+    const sendBt = document.querySelector('#send')
+    const room = document.querySelector('.room')
+    const tarea = document.querySelector('textarea');
+
+
+    //when send bt is clicked, let the message box appear as in the addText function
+    // this is just an object, (message object)
+    class msgBox {
+        constructor(room, incoming, text) {
+            this.room = room
+            this.incoming = incoming
+            this.text = text
+                //select template, duplicate it and select children
+            var template = document.querySelector('template');
+            this.msg_box_node = template.content.cloneNode(true)
+            this.msg_box = this.msg_box_node.querySelector('.outgoing_messagebox')
+            this.msg = this.msg_box.querySelector('p')
+                //the message should be the text from the text area
+            this.msg.textContent = this.text;
+
+            //select a message line a give it an id
+            //get the msgline from template
+            this.msgline = this.msg_box_node.querySelector('.msgline');
+            //style the messages accordingly
+            this.styleMessages();
+            // also check if the message is incoming or not
+            this.checkIfIncoming();
+
+
+
+            // add the message to the room
+            this.room.appendChild(this.msg_box_node);
+            this.msg.scrollIntoView({
+                'behavior': 'smooth'
+            });
+            return (this.msg_box_node);
+        };
+        styleMessages() {
+            //get the id whether it is outgoing or incoming
+            var id = this.msgline.getAttribute('id')
+            if (id === "outgoing") {
+                this.msgline.style.justifyContent = 'right'
+                this.msg_box.style.borderRadius = '20px 20px 0px 20px'
+            } else if (id === 'incoming') {
+                this.msgline.style.justifyContent = 'left'
+                this.msg_box.style.borderRadius = '20px 20px 20px 0px'
+            }
+        };
+        checkIfIncoming() {
+            if (this.incoming) {
+                //set id of message line to be incoming else outgoing
+                this.msgline.setAttribute('id', 'incoming')
+            } else {
+                this.msgline.setAttribute('id', 'outgoing')
+            }
+        };
+    }
+
+    //global function
+    function addText(incoming, text) {
+        //check if message is incoming or not then
+        //add new message box 
+        if (incoming) {
+            // if incoming
+            msg = new msgBox(room, true, text);
+        } else {
+            //if the message is outgoing
+            msg = new msgBox(room, false, text);
+        }
+    }
+
+    function checkText() {
+        if (tarea.value.trim().length < 1) {
+            sendBt.setAttribute('disabled', '')
+        } else {
+            sendBt.removeAttribute('disabled')
+        }
+    }
+
+    //home of event listeners and co
+    function app() {
+        sendBt.addEventListener('click', () => {
+            // true-false value is subject to change accordingly
+            // but since we are incharge of only what we type and send, it stays at false
+            //meaning message is always OUTGOING
+
+            addText(false, tarea.value);
+            tarea.value = ""
+            checkText()
+        });
+        window.addEventListener('load', checkText)
+        tarea.addEventListener('keyup', checkText)
+        tarea.addEventListener('focus', checkText)
+        tarea.addEventListener('blur', checkText)
+    }
+
+    app()
+</script>
+<script type="text/javascript">
+</script>
+
+</html>
+
+</html>
