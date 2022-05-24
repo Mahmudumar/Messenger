@@ -5,11 +5,7 @@ app=Flask(__name__)
 app.secret_key = 'hello'
 socketio=SocketIO(app)
 
-@socketio.on('message')
-def handle_message(message):
-    print(message+'received')
-    send(message, broadcast=True)
-
+  
 @app.route('/')
 def welcome():
     return '<h1>Welcome to Unanimos</h1>\
@@ -24,6 +20,12 @@ def login():
     else:
         return render_template('login.html')
 
+@socketio.on('message')
+def handle_message(message):
+    print('Received message: '+message)
+    if message != "User connected!":
+        send(message, broadcast=True)
+  
 @app.route('/user',methods=['POST','GET'])
 def user():
     if 'user' in session:
