@@ -2,8 +2,8 @@ from flask import Flask, redirect, render_template, url_for,request,session
 from flask_socketio import SocketIO, send
 
 app=Flask(__name__)
-app.secret_key = 'hello'
-socketio=SocketIO(app)
+app.secret_key = 'Hello'
+socketio=SocketIO(app, cors_allowed_origins='*')
 
   
 @app.route('/')
@@ -22,7 +22,7 @@ def login():
 
 @socketio.on('message')
 def handle_message(message):
-    print('Received message: '+message)
+    print(f'Received message: {message}')
     if message != "User connected!":
         send(message, broadcast=True)
   
@@ -31,8 +31,5 @@ def user():
     if 'user' in session:
         user=session["user"]
         return render_template('user.html', username=user)
-
-if __name__ =="__main__":
-    socketio.run(app, debug=True)
 
 
